@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: horizon
+      POSTGRES_USER: horizon
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "horizon"]
+      interval: 10s
+      retries: 5
+
+  horizon:
+    image: stellar/stellar-horizon:4.1.0    # pick an exact tag
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"        # Public API
+      - "6060:6060"        # Optional admin (metrics / pprof)
+    environment:
+      # --- core connection ---
+      NETWORK: "${STELLAR_NETWORK:-pubnet}"          # pubnet, testnet, or futurenet
+      HISTORY_ARCHIVE_URLS: "${HISTORY_ARCHIVE_URLS}"
+      CAPTIVE_CORE_CONFIG_PATH: "/etc/captive-core/captive-core.cfg"
+      CAPTIVE_CORE_STORAGE_PATH: "/var/horizon/core"   # persists ledger buckets
+      # --- ingestion ---
+      INGEST: "${INGEST:-true}"
+      HISTORY_RETENTION_COUNT: "${HISTORY_RETENTION_COUNT:-518400}"     # ≈30 days default
+      # --- database ---
+      DATABASE_URL: "postgresql://horizon:${DB_PASSWORD}@db:5432/horizon?sslmode=disable"
+      # --- ops & telemetry ---
+      ADMIN_PORT: "${ADMIN_PORT:-6060}"          # exposes /metrics
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+    volumes:
+      - ./networks/${STELLAR_NETWORK:-pubnet}:/etc/captive-core   # network-specific config
+      - horizon_state:/var/horizon
+    command: ["stellar-horizon", "serve"]
+
+volumes:
+  postgres_data:
+  horizon_state:

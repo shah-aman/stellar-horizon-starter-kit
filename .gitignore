@@ -1,0 +1,20 @@
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Docker volumes (if running with local bind mounts)
+/postgres_data/
+/horizon_state/
