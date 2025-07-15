@@ -40,7 +40,7 @@ services:
     volumes:
       - ./networks/${STELLAR_NETWORK:-pubnet}:/etc/captive-core   # network-specific config
       - horizon_state:/var/horizon
-    command: ["/usr/bin/stellar-horizon", "serve"]
+    command: ["horizon", "serve"]
 
 volumes:
   postgres_data:
