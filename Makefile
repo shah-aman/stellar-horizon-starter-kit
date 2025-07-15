@@ -21,9 +21,7 @@ up: ## Start the stack
 	fi
 	@export STELLAR_NETWORK=$(NETWORK) && \
 	case $(NETWORK) in \
-		pubnet) export HISTORY_ARCHIVE_URLS="https://history.stellar.org/prd/core-live/core_live_001/" ;; \
-		testnet) export HISTORY_ARCHIVE_URLS="https://history.stellar.org/prd/core-testnet/core_testnet_001/" ;; \
-		futurenet) export HISTORY_ARCHIVE_URLS="https://history.stellar.org/prd/core-futurenet/core_futurenet_001/" ;; \
+		pubnet|testnet|futurenet) ;; \
 		*) echo "Error: Invalid network. Use pubnet, testnet, or futurenet."; exit 1 ;; \
 	esac && \
 	docker compose up -d
