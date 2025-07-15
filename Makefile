@@ -11,7 +11,7 @@ help: ## Show this help message
 
 init: ## Initialize the database
 	@echo "Initializing Horizon database..."
-	docker compose run --rm horizon horizon db init
+	docker compose run --rm --entrypoint="" horizon horizon db init
 
 up: ## Start the stack
 	@echo "Starting Stellar Horizon (network: $(NETWORK))..."
@@ -58,6 +58,6 @@ update: ## Update Horizon to latest version
 	@echo "Pulling latest Horizon image..."
 	docker compose pull horizon
 	@echo "Running database migrations..."
-	docker compose run --rm horizon horizon db migrate up
+	docker compose run --rm --entrypoint="" horizon horizon db migrate up
 	@echo "Restarting Horizon..."
 	$(MAKE) restart NETWORK=$(NETWORK)
