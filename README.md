@@ -13,6 +13,31 @@ A production-ready deployment of **Stellar Horizon** using Docker Compose. This 
 
 ## 🚀 Quick Start
 
+### Prerequisites (Ubuntu 24.10)
+
+```bash
+# Update system packages
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker (using Ubuntu's package for 24.10 compatibility)
+sudo apt install -y docker.io docker-compose-v2
+
+# Alternative: Install Docker from snap (if ubuntu packages don't work)
+# sudo snap install docker
+
+# Start Docker service
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Add current user to docker group (optional, requires logout/login)
+sudo usermod -aG docker $USER
+
+# Install make and git
+sudo apt install -y make git
+```
+
+### Setup and Deployment
+
 ```bash
 # Clone the repository
 git clone https://github.com/withObsrvr/stellar-horizon-starter-kit.git
