@@ -1,0 +1,146 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: horizon
+      POSTGRES_USER: horizon
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Use dedicated 17.6TB disk for PostgreSQL data
+      - /data/postgres/data:/var/lib/postgresql/data
+      # PostgreSQL configuration optimizations
+      - ./postgres-conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres-conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    # Performance optimized command for 30-day retention workload
+    command: >
+      postgres 
+      -c shared_buffers=4GB
+      -c effective_cache_size=12GB
+      -c maintenance_work_mem=1GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=64MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.0
+      -c effective_io_concurrency=200
+      -c work_mem=256MB
+      -c max_worker_processes=8
+      -c max_parallel_workers_per_gather=4
+      -c max_parallel_workers=8
+      -c max_parallel_maintenance_workers=4
+      -c max_connections=100
+      -c log_min_duration_statement=1000
+      -c log_checkpoints=on
+      -c autovacuum_naptime=20s
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "horizon"]
+      interval: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+
+  horizon:
+    image: stellar/stellar-horizon:22.0.3
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"        # Public API
+      - "6060:6060"        # Admin (metrics / pprof)
+    environment:
+      # --- core connection ---
+      NETWORK: "${STELLAR_NETWORK:-pubnet}"
+      CAPTIVE_CORE_CONFIG_PATH: "/etc/captive-core/captive-core.cfg"
+      # Use dedicated 32TB disk for core storage
+      CAPTIVE_CORE_STORAGE_PATH: "/var/horizon/core"
+      
+      # --- ingestion optimization ---
+      INGEST: "${INGEST:-true}"
+      HISTORY_RETENTION_COUNT: "${HISTORY_RETENTION_COUNT:-518400}"
+      
+      # --- performance tuning for 30-day retention ---
+      CAPTIVE_CORE_HTTP_PORT: "11726"
+      CAPTIVE_CORE_PEER_PORT: "11725"
+      CAPTIVE_CORE_USE_DB: "false"
+      
+      # --- parallel processing optimized for 30-day sync ---
+      PARALLEL_JOB_SIZE: "${PARALLEL_JOB_SIZE:-100000}"
+      PARALLEL_HISTORY_ARCHIVE_DOWNLOADS: "${PARALLEL_HISTORY_ARCHIVE_DOWNLOADS:-4}"
+      
+      # --- connection and timeout settings ---
+      HTTP_REQUEST_TIMEOUT: "${HTTP_REQUEST_TIMEOUT:-30}"
+      CAPTIVE_CORE_HTTP_TIMEOUT: "${CAPTIVE_CORE_HTTP_TIMEOUT:-30}"
+      MAX_DB_CONNECTIONS: "${MAX_DB_CONNECTIONS:-50}"
+      
+      # --- database ---
+      DATABASE_URL: "postgresql://horizon:${DB_PASSWORD}@db:5432/horizon?sslmode=disable"
+      
+      # --- ops & telemetry ---
+      ADMIN_PORT: "${ADMIN_PORT:-6060}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      
+      # --- memory limits ---
+      CAPTIVE_CORE_STORAGE_PATH: "/var/horizon/core"
+      
+    volumes:
+      # Network-specific configuration
+      - ./networks/${STELLAR_NETWORK:-pubnet}:/etc/captive-core
+      # Use dedicated 32TB disk for Horizon state
+      - /data/horizon:/var/horizon
+      # Temporary directory for large operations
+      - /tmp/horizon:/tmp/horizon
+    
+    # Resource limits for stability
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+    
+    command: ["serve"]
+
+  # Optional: Redis for caching (improves API performance)
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - /data/postgres/redis:/data
+    command: >
+      redis-server 
+      --maxmemory 2GB
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G
+        reservations:
+          memory: 1G
+
+  # Optional: Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /data/postgres/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+
+# No longer using Docker volumes, using direct disk mounts
+volumes: {} 
