@@ -192,7 +192,13 @@ setup_environment_config() {
     print_status "Generating secure database password..."
     if command -v openssl &> /dev/null; then
         DB_PASSWORD=$(openssl rand -base64 32)
-        sed -i "s/CHANGE_THIS_TO_A_STRONG_PASSWORD/$DB_PASSWORD/" .env
+        # Replace placeholder safely using a delimiter that avoids conflicts with / in the password
+        sed -i "s|CHANGE_THIS_TO_A_STRONG_PASSWORD|$DB_PASSWORD|" .env || {
+            print_warning "Automatic password insertion failed; inserting manually."
+            # fallback: use envsubst style replacement
+            tmp_pw=$(printf '%s' "$DB_PASSWORD" | sed 's/[&/]/\\&/g')
+            sed -i "s|CHANGE_THIS_TO_A_STRONG_PASSWORD|$tmp_pw|" .env
+        }
         print_success "Secure database password generated and configured"
     else
         print_warning "OpenSSL not found. Please manually set DB_PASSWORD in .env file"
