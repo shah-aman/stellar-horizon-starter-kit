@@ -50,43 +50,40 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"        # Public API
-      - "6060:6060"        # Admin (metrics / pprof)
+      - "8000:8000" # Public API
+      - "6060:6060" # Admin (metrics / pprof)
     environment:
       # --- core connection ---
       NETWORK: "${STELLAR_NETWORK:-pubnet}"
       CAPTIVE_CORE_CONFIG_PATH: "/etc/captive-core/captive-core.cfg"
       # Use dedicated 32TB disk for core storage
       CAPTIVE_CORE_STORAGE_PATH: "/var/horizon/core"
-      
+
       # --- ingestion optimization ---
       INGEST: "${INGEST:-true}"
       HISTORY_RETENTION_COUNT: "${HISTORY_RETENTION_COUNT:-518400}"
-      
+
       # --- performance tuning for 30-day retention ---
       CAPTIVE_CORE_HTTP_PORT: "11726"
       CAPTIVE_CORE_PEER_PORT: "11725"
       CAPTIVE_CORE_USE_DB: "false"
-      
+
       # --- parallel processing optimized for 30-day sync ---
       PARALLEL_JOB_SIZE: "${PARALLEL_JOB_SIZE:-100000}"
       PARALLEL_HISTORY_ARCHIVE_DOWNLOADS: "${PARALLEL_HISTORY_ARCHIVE_DOWNLOADS:-4}"
-      
+
       # --- connection and timeout settings ---
       HTTP_REQUEST_TIMEOUT: "${HTTP_REQUEST_TIMEOUT:-30}"
       CAPTIVE_CORE_HTTP_TIMEOUT: "${CAPTIVE_CORE_HTTP_TIMEOUT:-30}"
       MAX_DB_CONNECTIONS: "${MAX_DB_CONNECTIONS:-50}"
-      
+
       # --- database ---
       DATABASE_URL: "postgresql://horizon:${DB_PASSWORD}@db:5432/horizon?sslmode=disable"
-      
+
       # --- ops & telemetry ---
       ADMIN_PORT: "${ADMIN_PORT:-6060}"
       LOG_LEVEL: "${LOG_LEVEL:-info}"
-      
-      # --- memory limits ---
-      CAPTIVE_CORE_STORAGE_PATH: "/var/horizon/core"
-      
+
     volumes:
       # Network-specific configuration
       - ./networks/${STELLAR_NETWORK:-pubnet}:/etc/captive-core
@@ -94,7 +91,7 @@ services:
       - /data/horizon:/var/horizon
       # Temporary directory for large operations
       - /tmp/horizon:/tmp/horizon
-    
+
     # Resource limits for stability
     deploy:
       resources:
@@ -102,7 +99,7 @@ services:
           memory: 8G
         reservations:
           memory: 4G
-    
+
     command: ["serve"]
 
   # Optional: Redis for caching (improves API performance)
@@ -135,12 +132,12 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - /data/postgres/prometheus:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-      - '--storage.tsdb.retention.time=30d'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+      - "--storage.tsdb.retention.time=30d"
 
 # No longer using Docker volumes, using direct disk mounts
-volumes: {} 
+volumes: {}
