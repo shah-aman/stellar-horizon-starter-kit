@@ -29,8 +29,12 @@ if lsblk | grep -q "sdc"; then
     fi
     
     # Mount the disk
-    echo "Mounting /dev/sdc to /data/horizon..."
-    mount /dev/sdc /data/horizon
+    echo "Mounting /dev/sdc to /data/horizon (if not mounted)..."
+    if mountpoint -q /data/horizon; then
+        echo "Already mounted, skipping."
+    else
+        mount /dev/sdc /data/horizon || echo "Mount failed but partition already mounted. Continuing."
+    fi
     
     # Add to fstab for persistent mounting
     UUID=$(blkid -s UUID -o value /dev/sdc)
@@ -52,8 +56,12 @@ if lsblk | grep -q "sdd"; then
     fi
     
     # Mount the disk
-    echo "Mounting /dev/sdd to /data/postgres..."
-    mount /dev/sdd /data/postgres
+    echo "Mounting /dev/sdd to /data/postgres (if not mounted)..."
+    if mountpoint -q /data/postgres; then
+        echo "Already mounted, skipping."
+    else
+        mount /dev/sdd /data/postgres || echo "Mount failed but partition already mounted. Continuing."
+    fi
     
     # Add to fstab for persistent mounting
     UUID=$(blkid -s UUID -o value /dev/sdd)
