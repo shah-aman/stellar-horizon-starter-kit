@@ -1,4 +1,4 @@
-.PHONY: help init up down restart logs health clean update
+.PHONY: help init up down restart logs health sync-status db-size clean update
 
 # Default network is pubnet
 NETWORK ?= pubnet
@@ -40,6 +40,17 @@ logs: ## Follow logs
 
 health: ## Check health status
 	@./scripts/health-check.sh
+
+sync-status: ## Check sync progress for full history
+	@echo "Current sync status:"
+	@curl -s http://localhost:8000/ledgers?order=desc&limit=1 | jq '.._embedded.records[0] | {sequence, closed_at}' 2>/dev/null || echo "API not ready or jq not installed"
+	@echo ""
+	@echo "Latest logs:"
+	@docker compose logs horizon | tail -5
+
+db-size: ## Check database size (useful for full history monitoring)
+	@echo "Database sizes:"
+	@docker compose exec -T db psql -U horizon -d horizon -c "SELECT pg_size_pretty(pg_database_size('horizon')) as total_db_size;" 2>/dev/null || echo "Database not ready"
 
 clean: ## Remove all data volumes (WARNING: destroys all data)
 	@echo "WARNING: This will destroy all data!"

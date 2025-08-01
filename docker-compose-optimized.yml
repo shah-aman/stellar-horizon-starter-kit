@@ -12,7 +12,7 @@ services:
       # PostgreSQL configuration optimizations
       - ./postgres-conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./postgres-conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
-    # Performance optimized command for 30-day retention workload
+    # Performance optimized command for full history workload
     command: >
       postgres 
       -c shared_buffers=4GB
@@ -61,15 +61,15 @@ services:
 
       # --- ingestion optimization ---
       INGEST: "${INGEST:-true}"
-      HISTORY_RETENTION_COUNT: "${HISTORY_RETENTION_COUNT:-518400}"
+      HISTORY_RETENTION_COUNT: "${HISTORY_RETENTION_COUNT:-0}"
 
-      # --- performance tuning for 30-day retention ---
+      # --- performance tuning for full history ---
       CAPTIVE_CORE_HTTP_PORT: "11726"
       CAPTIVE_CORE_PEER_PORT: "11725"
       CAPTIVE_CORE_USE_DB: "false"
 
-      # --- parallel processing optimized for 30-day sync ---
-      PARALLEL_JOB_SIZE: "${PARALLEL_JOB_SIZE:-100000}"
+      # --- parallel processing optimized for full history sync ---
+      PARALLEL_JOB_SIZE: "${PARALLEL_JOB_SIZE:-50000}"
       PARALLEL_HISTORY_ARCHIVE_DOWNLOADS: "${PARALLEL_HISTORY_ARCHIVE_DOWNLOADS:-4}"
 
       # --- connection and timeout settings ---

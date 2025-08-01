@@ -6,10 +6,12 @@ A production-ready deployment of **Stellar Horizon** using Docker Compose. This 
 
 - **Production-focused** – Separate containers for each service with persistent volumes
 - **Multi-network support** – Easy switching between Pubnet, Testnet, and Futurenet
+- **Full history support** – Complete historical data from Stellar genesis with performance optimizations
 - **Health monitoring** – Built-in health checks and metrics endpoints
 - **Easy operations** – Makefile for common tasks
 - **Configurable** – Environment variables for all key settings
 - **Scalable** – Clear path to horizontal scaling
+- **Performance optimized** – Enhanced Docker Compose with PostgreSQL tuning for fastest sync
 
 ## 🚀 Quick Start
 
@@ -38,23 +40,36 @@ sudo apt install -y make git
 
 ### Setup and Deployment
 
+**For Full History Sync (recommended for production):**
+
 ```bash
 # Clone the repository
 git clone https://github.com/withObsrvr/stellar-horizon-starter-kit.git
 cd stellar-horizon-starter-kit
 
-# Copy and configure environment variables
-cp .env.example .env
+# Use the optimized full history configuration
+cp full-history.env .env
 # Edit .env and set a strong DB_PASSWORD
 
 # Initialize the database
 make init
 
-# Start the stack (defaults to pubnet)
+# Start full history sync (will take 7-21 days for Pubnet)
 make up
 
-# Or start with a specific network
-make up NETWORK=testnet
+# See FULL_HISTORY_SETUP.md for detailed optimization guide
+```
+
+**For 30-Day Retention (faster sync):**
+
+```bash
+# Use the 30-day retention configuration instead
+cp horizon-30day.env .env
+# Edit .env and set DB_PASSWORD
+
+# Initialize and start
+make init
+make up NETWORK=pubnet
 ```
 
 ## 📂 Repository Structure
@@ -72,19 +87,29 @@ make up NETWORK=testnet
     └── health-check.sh   # Health monitoring script
 ```
 
-## 🔧 Configuration
+## 🔧 Configuration Options
+
+### Configuration Files
+
+| File                | Purpose                        | Sync Time   | Storage | Use Case                 |
+| ------------------- | ------------------------------ | ----------- | ------- | ------------------------ |
+| `full-history.env`  | **Full history** (recommended) | 7-21 days   | 25-35TB | Complete historical data |
+| `horizon-30day.env` | **30-day retention**           | 12-24 hours | ~1TB    | Recent data only         |
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DB_PASSWORD` | PostgreSQL password (required) | - |
-| `STELLAR_NETWORK` | Network to connect to: pubnet, testnet, futurenet | pubnet |
-| `HISTORY_ARCHIVE_URLS` | History archive URL for the network | (auto-set based on network) |
-| `INGEST` | Enable/disable ingestion | true |
-| `HISTORY_RETENTION_COUNT` | Number of ledgers to retain | 518400 (~30 days) |
-| `ADMIN_PORT` | Admin port for metrics and pprof | 6060 |
-| `LOG_LEVEL` | Log level: debug, info, warn, error | info |
+| Variable                             | Description                                       | Full History | 30-Day   |
+| ------------------------------------ | ------------------------------------------------- | ------------ | -------- |
+| `DB_PASSWORD`                        | PostgreSQL password (required)                    | Required     | Required |
+| `STELLAR_NETWORK`                    | Network to connect to: pubnet, testnet, futurenet | pubnet       | pubnet   |
+| `HISTORY_RETENTION_COUNT`            | Number of ledgers to retain (0 = unlimited)       | 0            | 518400   |
+| `PARALLEL_JOB_SIZE`                  | Batch size for processing                         | 75000        | 100000   |
+| `PARALLEL_HISTORY_ARCHIVE_DOWNLOADS` | Concurrent archive downloads                      | 8            | 4        |
+| `MAX_DB_CONNECTIONS`                 | Database connection pool size                     | 100          | 50       |
+| `ADMIN_PORT`                         | Admin port for metrics and pprof                  | 6060         | 6060     |
+| `LOG_LEVEL`                          | Log level: debug, info, warn, error               | info         | info     |
+
+> 📖 **For detailed full history setup and performance tuning, see [FULL_HISTORY_SETUP.md](FULL_HISTORY_SETUP.md)**
 
 ### Network Selection
 
@@ -176,6 +201,7 @@ make update
 ```
 
 This will:
+
 - Pull the new image
 - Run database migrations
 - Restart the service
@@ -183,9 +209,11 @@ This will:
 ## 🏗️ Scaling
 
 ### Single Instance (Default)
+
 The default configuration runs all Horizon roles in a single container: ingestion, API serving, and transaction submission.
 
 ### Horizontal Scaling
+
 For production deployments with higher load, you can split Horizon into dedicated roles:
 
 1. **Ingestion node**: Set `INGEST=true`, `DISABLE_TX_SUB=true`
@@ -217,14 +245,14 @@ SELECT pg_reload_conf();
 
 ## 🆚 Differences from stellar/quickstart
 
-| Feature | This Kit | stellar/quickstart |
-|---------|----------|-------------------|
-| **Purpose** | Production-ready | Development only |
-| **Architecture** | Separate containers | All-in-one |
-| **Data persistence** | Named volumes | Container filesystem |
-| **Configuration** | Environment variables | Command-line flags |
-| **Security** | Production practices | Development defaults |
-| **Monitoring** | Built-in health checks | Basic only |
+| Feature              | This Kit               | stellar/quickstart   |
+| -------------------- | ---------------------- | -------------------- |
+| **Purpose**          | Production-ready       | Development only     |
+| **Architecture**     | Separate containers    | All-in-one           |
+| **Data persistence** | Named volumes          | Container filesystem |
+| **Configuration**    | Environment variables  | Command-line flags   |
+| **Security**         | Production practices   | Development defaults |
+| **Monitoring**       | Built-in health checks | Basic only           |
 
 ## 📚 Resources
 
